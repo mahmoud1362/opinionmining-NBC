@@ -1,0 +1,50 @@
+package Classify;
+import Tokenizer.*;
+
+public class NaiveBayesClassifier 
+    extends DynamicLMClassifier<TokenizedLM> {
+    public NaiveBayesClassifier(String[] categories,
+                                TokenizerFactory tokenizerFactory) {
+        this(categories,tokenizerFactory,0);
+    }         
+    public NaiveBayesClassifier(String[] categories,
+                                TokenizerFactory tokenizerFactory,
+                                int charSmoothingNGram) {
+        this(categories,tokenizerFactory,
+             charSmoothingNGram,Character.MAX_VALUE-1);
+    }
+     public NaiveBayesClassifier(String[] categories,
+                                TokenizerFactory tokenizerFactory,
+                                int charSmoothingNGram,
+                                int maxObservedChars) {
+        super(categories,
+              naiveBayesLMs(categories.length,
+                            tokenizerFactory,
+                            charSmoothingNGram,
+                            maxObservedChars));
+    }
+
+    // construct the LMs for categories
+    private static TokenizedLM[] 
+        naiveBayesLMs(int length, TokenizerFactory tokenizerFactory,
+                      int charSmoothingNGram, int maxObservedChars) {
+    
+        TokenizedLM[] lms = new TokenizedLM[length];
+        for (int i = 0; i < lms.length; ++i) {
+            LanguageModel.Sequence charLM;
+            if (charSmoothingNGram < 1)
+                charLM = new UniformBoundaryLM(maxObservedChars);
+            else
+                charLM = new NGramBoundaryLM(charSmoothingNGram,
+                                             maxObservedChars);
+            lms[i]
+                = new TokenizedLM(tokenizerFactory,
+                                  1,
+                                  charLM,
+                                  UniformBoundaryLM.ZERO_LM,
+                                  1);
+        }
+        return lms;
+    }
+}
+
