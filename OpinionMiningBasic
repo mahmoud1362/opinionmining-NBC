@@ -1,0 +1,100 @@
+package Classify;
+
+import Classify.Classification;
+import Classify.Classified;
+import Classify.DynamicLMClassifier;
+import Node.NGramProcessLM;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.File;
+import java.io.IOException;
+
+public class OpinionMiningBasic {
+
+    File OM_DataSetDIR;
+    String[] omCategories;
+    DynamicLMClassifier<NGramProcessLM> omClassifier;
+
+    OpinionMiningBasic(String[] args) {
+        System.out.println("\nNLP Project (Opinion Mining on Movie Reviews)");
+        OM_DataSetDIR = new File(args[0],"txt_sentoken");
+        System.out.println("\nDataSet Directory=" + OM_DataSetDIR);
+        omCategories = OM_DataSetDIR.list();
+        int nGram = 3;
+        omClassifier 
+            = DynamicLMClassifier.createNGramProcess(omCategories,nGram);
+    }
+
+    void run() throws ClassNotFoundException, IOException {
+        train();
+        evaluate();
+    }
+
+    boolean isTrainingFile(File file) {
+        return file.getName().charAt(2) != '3';  
+    }
+
+    void train() throws IOException {
+        int numTrainingCases = 0;
+        int numTrainingChars = 0;
+        System.out.println("\nTraining.");
+        for (int i = 0; i < omCategories.length; ++i) {
+            String category = omCategories[i];
+            Classification classification
+                = new Classification(category);
+            File file = new File(OM_DataSetDIR,omCategories[i]);
+            File[] trainFiles = file.listFiles();
+            for (int j = 0; j < trainFiles.length; ++j) {
+                File trainFile = trainFiles[j];
+                if (isTrainingFile(trainFile)) {
+                    ++numTrainingCases;
+                    String review = Files.readFromFile(trainFile,"ISO-8859-1");
+                    numTrainingChars += review.length();
+                    Classified<CharSequence> classified
+                        = new Classified<CharSequence>(review,classification);
+                    omClassifier.handle(classified);
+                }
+            }
+        }
+        System.out.println("  # Training Cases=" + numTrainingCases);
+        System.out.println("  # Training Chars=" + numTrainingChars);
+    }
+
+    void evaluate() throws IOException {
+        System.out.println("\nEvaluating.");
+        int numTests = 0;
+        int numCorrect = 0;
+        for (int i = 0; i < omCategories.length; ++i) {
+            String category = omCategories[i];
+            File file = new File(OM_DataSetDIR,omCategories[i]);
+            File[] trainFiles = file.listFiles();
+            for (int j = 0; j < trainFiles.length; ++j) {
+                File trainFile = trainFiles[j];
+                if (!isTrainingFile(trainFile)) {
+                    String review = Files.readFromFile(trainFile,"ISO-8859-1");
+                    ++numTests;
+                    Classification classification
+                        = omClassifier.classify(review);
+                    if (classification.bestCategory().equals(category))
+                        ++numCorrect;
+                }
+            }
+        }
+        System.out.println("  # Test Cases=" + numTests);
+        System.out.println("  # Correct=" + numCorrect);
+        System.out.println("  % Correct=" 
+                           + ((double)numCorrect)/(double)numTests);
+    }
+
+    public static void main(String[] args) {
+        try {
+            new OpinionMiningBasic(args).run();
+        } catch (Throwable t) {
+            System.out.println("Thrown: " + t);
+            t.printStackTrace(System.out);
+        }
+    }
+
+}
+
